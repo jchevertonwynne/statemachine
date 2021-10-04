@@ -16,8 +16,8 @@ impl Distance for Manhattan {
 
 impl Distance for Euclidian {
     fn distance(a: (usize, usize), b: (usize, usize)) -> f64 {
-        let x_diff = (a.0 as isize - b.0 as isize) as f64;
-        let y_diff = (a.1 as isize - b.1 as isize) as f64;
+        let x_diff = (a.0 as isize - b.0 as isize).abs() as f64;
+        let y_diff = (a.1 as isize - b.1 as isize).abs() as f64;
         (x_diff.powi(2) + y_diff.powi(2)).sqrt()
     }
 }

@@ -6,12 +6,11 @@ use rand::prelude::SliceRandom;
 use crate::traits::{Distance, State};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct TileBoard<D: Distance, const C: usize, const R: usize> {
-    inner: [[usize; C]; R],
-    _dist: PhantomData<D>,
+pub struct TileBoard<const C: usize, const R: usize> {
+    inner: [[usize; C]; R]
 }
 
-impl<D: Distance, const C: usize, const R: usize> Default for TileBoard<D, C, R> {
+impl<const C: usize, const R: usize> Default for TileBoard<C, R> {
     fn default() -> Self {
         let mut inner = [[0; C]; R];
 
@@ -25,15 +24,14 @@ impl<D: Distance, const C: usize, const R: usize> Default for TileBoard<D, C, R>
         inner[R - 1][C - 1] = 0;
 
         Self {
-            inner,
-            _dist: PhantomData,
+            inner
         }
     }
 }
 
-impl<D: Distance, const C: usize, const R: usize> TileBoard<D, C, R> {
+impl<const C: usize, const R: usize> TileBoard<C, R> {
     pub fn shuffled(shuffles: usize) -> Self {
-        let mut res: TileBoard<D, C, R> = TileBoard::default();
+        let mut res: TileBoard<C, R> = TileBoard::default();
 
         let (mut pos_x, mut pos_y) = (C - 1, R - 1);
 
@@ -70,7 +68,7 @@ impl<D: Distance, const C: usize, const R: usize> TileBoard<D, C, R> {
     }
 }
 
-impl<D: Distance, const C: usize, const R: usize> State for TileBoard<D, C, R> {
+impl<const C: usize, const R: usize> State for TileBoard<C, R> {
     fn next(&self) -> Vec<Self> {
         let mut res = Vec::new();
 
@@ -118,29 +116,30 @@ impl<D: Distance, const C: usize, const R: usize> State for TileBoard<D, C, R> {
     }
 
     fn finished(&self) -> bool {
-        let expected: TileBoard<D, C, R> = TileBoard::default();
+        let expected: TileBoard<C, R> = TileBoard::default();
         self.inner == expected.inner
     }
 
-    fn score(&self) -> f64 {
-        let mut tot = 0f64;
+    fn differences(&self) -> Vec<((usize, usize), (usize, usize))> {
         let mut pos = vec![0; C * R];
         for i in 0..(C * R) {
             let val = self.inner[i % R][i / R];
             pos[val] = i;
         }
 
+        let mut res = Vec::with_capacity(C * R);
+
         for (real, found) in pos.iter().enumerate() {
             let real = (real / R, real % R);
             let found = (found / R, found % R);
-            tot += D::distance(real, found);
+            res.push((real, found));
         }
 
-        tot / (C * R) as f64
+        res
     }
 }
 
-impl<D: Distance, const C: usize, const R: usize> Debug for TileBoard<D, C, R> {
+impl<const C: usize, const R: usize> Debug for TileBoard<C, R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in self.inner {
             write!(f, "\n{:?}", row)?;

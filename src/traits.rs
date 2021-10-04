@@ -5,7 +5,7 @@ use crate::sharedlist::SharedList;
 pub trait State: Hash + Eq + Sized + Clone {
     fn next(&self) -> Vec<Self>;
     fn finished(&self) -> bool;
-    fn score(&self) -> f64;
+    fn differences(&self) -> Vec<((usize, usize), (usize, usize))>;
 }
 
 pub trait Solver<S: State, SB: StateBox<S>> {

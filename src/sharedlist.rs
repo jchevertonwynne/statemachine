@@ -6,7 +6,7 @@ pub enum SharedList<T> {
     Valued { length: usize, node: Rc<Node<T>> },
 }
 
-impl <T> Default for SharedList<T> {
+impl<T> Default for SharedList<T> {
     fn default() -> Self {
         SharedList::new()
     }
@@ -42,7 +42,7 @@ impl<T> SharedList<T> {
     }
 }
 
-impl<T: Clone> Clone for SharedList<T> {
+impl<T> Clone for SharedList<T> {
     fn clone(&self) -> Self {
         match self {
             Self::Empty => Self::Empty,

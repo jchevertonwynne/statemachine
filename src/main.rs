@@ -1,13 +1,7 @@
-use statemachine::{
-    boxes::{AStarBox, BFSBox},
-    distances::Euclidian,
-    machine::Machine,
-    tileboard::TileBoard,
-    traits::Solver,
-};
+use statemachine::{boxes::{AStarBox, BFSBox, StaggeredBox}, distances::{Euclidian, Manhattan}, machine::Machine, tileboard::TileBoard, traits::Solver};
 
 fn main() {
-    let state: TileBoard<Euclidian, 3, 3> = TileBoard::shuffled(100);
+    let state: TileBoard<3, 3> = TileBoard::shuffled(100000);
     println!("{:?}", state);
     let machine = Machine::new(state);
     println!(
@@ -18,9 +12,6 @@ fn main() {
     );
     println!(
         "solution is {} moves long",
-        Solver::<_, AStarBox<_>>::find_one(machine)
-            .unwrap()
-            .len()
+        Solver::<_, AStarBox<_, Euclidian>>::find_one(machine).unwrap().len()
     );
-    // Solver::<_, DFSBox<_>>::find_one(Machine::new(state.clone())).unwrap();
 }
