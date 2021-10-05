@@ -1,22 +1,15 @@
 use std::fmt::Debug;
 
-use statemachine::{
-    boxes::AStarBox,
-    distances::Euclidian,
-    machine::Machine,
-    tileboard::{Coord, TileBoard},
-    traits::{Solver, State, StateBox},
-};
+use statemachine::{boxes::BFSBox, hanoi::Hanoi, machine::Machine, traits::{Solver, State, StateBox}};
 
 fn main() {
-    let state: TileBoard<3, 3> = TileBoard::shuffled(100000);
-    let solved = TileBoard::default();
+    let state: Hanoi<12> = Hanoi::new();
+    let solved = Hanoi::solved();
+
     println!("{:?}", state);
     let machine = Machine::new(state, solved);
 
-    // run_and_report::<_, BFSBox<_>, _>(machine.clone());
-    // run_and_report::<_, AStarBox<_, Manhattan, Coord>, _>(machine.clone());
-    run_and_report::<_, AStarBox<_, Euclidian, Coord>, _>(machine);
+    run_and_report::<_, BFSBox<_>, _>(machine);
 }
 
 fn run_and_report<S: State + Debug, SB: StateBox<S>, SO: Solver<S>>(solver: SO) {
@@ -28,7 +21,6 @@ fn run_and_report<S: State + Debug, SB: StateBox<S>, SO: Solver<S>>(solver: SO) 
             turns,
             history.len()
         );
-        println!("{:?}", history);
     } else {
         println!("no solution found 😥");
     }

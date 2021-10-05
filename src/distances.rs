@@ -1,4 +1,4 @@
-use crate::{tileboard::Coord, traits::Distance};
+use crate::{Coord, traits::Distance};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Manhattan;

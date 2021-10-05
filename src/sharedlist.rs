@@ -54,6 +54,8 @@ impl<T: Clone> From<SharedList<T>> for Vec<T> {
             }
         }
 
+        res.reverse();
+
         res
     }
 }

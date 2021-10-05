@@ -3,33 +3,7 @@ use std::fmt::Debug;
 use arrayvec::ArrayVec;
 use rand::prelude::SliceRandom;
 
-use crate::traits::State;
-
-#[derive(PartialEq, Eq)]
-pub struct Coord {
-    column: usize,
-    row: usize,
-}
-
-impl Debug for Coord {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Coord({}, {})", self.column, self.row)
-    }
-}
-
-impl Coord {
-    fn new(column: usize, row: usize) -> Self {
-        Self { column, row }
-    }
-
-    pub fn column(&self) -> usize {
-        self.column
-    }
-
-    pub fn row(&self) -> usize {
-        self.row
-    }
-}
+use crate::{Coord, traits::State};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TileBoard<const C: usize, const R: usize> {

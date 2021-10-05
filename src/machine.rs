@@ -32,7 +32,7 @@ impl<S: State> Solver<S> for Machine<S> {
             for next_state in next_states {
                 let new_history = history.push(state.clone());
                 if next_state == self.complete_state {
-                    let complete_history = new_history.push(next_state.clone());
+                    let complete_history = new_history.push(next_state);
                     return Some((complete_history.into(), checks));
                 }
                 if !seen.contains(&next_state) {
