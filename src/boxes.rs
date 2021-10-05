@@ -1,6 +1,13 @@
-use std::{cmp::Reverse, collections::{BinaryHeap, VecDeque}, marker::PhantomData};
+use std::{
+    cmp::Reverse,
+    collections::{BinaryHeap, VecDeque},
+    marker::PhantomData,
+};
 
-use crate::{sharedlist::SharedList, traits::{Distance, State, StateBox}};
+use crate::{
+    sharedlist::SharedList,
+    traits::{Distance, State, StateBox},
+};
 
 pub struct BFSBox<S: State> {
     inner: VecDeque<(S, SharedList<S>)>,
@@ -10,64 +17,94 @@ pub struct DFSBox<S: State> {
     inner: Vec<(S, SharedList<S>)>,
 }
 
-pub struct AStarBox<S: State, D: Distance> {
-    inner: BinaryHeap<Reverse<AStarEntry<S, D>>>,
+pub struct AStarBox<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> {
+    inner: BinaryHeap<Reverse<AStarEntry<S, D, Diff>>>,
 }
 
-pub struct StaggeredBox<S: State> {
-    inner: Vec<BinaryHeap<Reverse<ScoredEntry<S>>>>,
+pub struct StaggeredBox<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> {
+    inner: Vec<BinaryHeap<Reverse<ScoredEntry<S, D, Diff>>>>,
 }
 
-#[derive(PartialEq, Eq)]
-struct AStarEntry<S: State, D: Distance> {
+struct AStarEntry<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> {
     state: S,
     history: SharedList<S>,
-    _dist: PhantomData<D>
+    _dist: PhantomData<D>,
 }
 
-#[derive(PartialEq, Eq)]
-struct ScoredEntry<S: State> {
+struct ScoredEntry<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> {
     state: S,
-    history: SharedList<S>
+    history: SharedList<S>,
+    _dist: PhantomData<D>,
 }
 
-impl<S: State, D: Distance> PartialOrd for AStarEntry<S, D> {
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> AStarEntry<S, D, Diff> {
+    fn score(&self) -> f64 {
+        self.state
+            .differences()
+            .into_iter()
+            .map(|(real, found)| D::distance(real, found))
+            .sum::<f64>()
+            + self.history.len() as f64
+    }
+}
+
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> PartialEq for AStarEntry<S, D, Diff> {
+    fn eq(&self, other: &Self) -> bool {
+        self.state == other.state && self.history == other.history
+    }
+}
+
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> Eq for AStarEntry<S, D, Diff> {}
+
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> PartialOrd
+    for AStarEntry<S, D, Diff>
+{
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<S: State, D: Distance> Ord for AStarEntry<S, D> {
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> Ord for AStarEntry<S, D, Diff> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let a = self.state.differences();
-        let b = other.state.differences();
-        let a = {
-            let mut res = 0f64;
-            for (real, found) in a {
-                res += D::distance(real, found);
-            }
-            res
-        };
-        let b = {
-            let mut res = 0f64;
-            for (real, found) in b {
-                res += D::distance(real, found);
-            }
-            res
-        };
+        let a = self.score();
+        let b = other.score();
         a.partial_cmp(&b).unwrap()
     }
 }
 
-impl<S: State> PartialOrd for ScoredEntry<S> {
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> ScoredEntry<S, D, Diff> {
+    fn score(&self) -> f64 {
+        self.state
+            .differences()
+            .into_iter()
+            .map(|(real, found)| D::distance(real, found))
+            .sum::<f64>()
+    }
+}
+
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> PartialEq
+    for ScoredEntry<S, D, Diff>
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.state == other.state && self.history == other.history
+    }
+}
+
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> Eq for ScoredEntry<S, D, Diff> {}
+
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> PartialOrd
+    for ScoredEntry<S, D, Diff>
+{
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<S: State> Ord for ScoredEntry<S> {
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> Ord for ScoredEntry<S, D, Diff> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.state.differences().partial_cmp(&other.state.differences()).unwrap()
+        let a = self.score();
+        let b = other.score();
+        a.partial_cmp(&b).unwrap()
     }
 }
 
@@ -102,19 +139,23 @@ impl<S: State> StateBox<S> for DFSBox<S> {
     }
 }
 
-impl<S: State, D: Distance> StateBox<S> for AStarBox<S, D> {
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> StateBox<S> for AStarBox<S, D, Diff> {
     fn init(state: S) -> Self {
         let mut inner = BinaryHeap::new();
         inner.push(Reverse(AStarEntry {
             state,
             history: SharedList::new(),
-            _dist: PhantomData
+            _dist: PhantomData,
         }));
         Self { inner }
     }
 
     fn insert(&mut self, state: S, history: SharedList<S>) {
-        self.inner.push(Reverse(AStarEntry { state, history, _dist: PhantomData }))
+        self.inner.push(Reverse(AStarEntry {
+            state,
+            history,
+            _dist: PhantomData,
+        }))
     }
 
     fn pop(&mut self) -> Option<(S, SharedList<S>)> {
@@ -122,7 +163,9 @@ impl<S: State, D: Distance> StateBox<S> for AStarBox<S, D> {
     }
 }
 
-impl<S: State> StateBox<S> for StaggeredBox<S> {
+impl<S: State<Point = Diff>, D: Distance<Point = Diff>, Diff> StateBox<S>
+    for StaggeredBox<S, D, Diff>
+{
     fn init(state: S) -> Self {
         let inner = Vec::new();
         let mut res = Self { inner };
@@ -139,7 +182,11 @@ impl<S: State> StateBox<S> for StaggeredBox<S> {
                 self.inner.push(BinaryHeap::new());
             }
         }
-        self.inner[history.len()].push(Reverse(ScoredEntry { state, history }))
+        self.inner[history.len()].push(Reverse(ScoredEntry {
+            state,
+            history,
+            _dist: PhantomData,
+        }))
     }
 
     fn pop(&mut self) -> Option<(S, SharedList<S>)> {

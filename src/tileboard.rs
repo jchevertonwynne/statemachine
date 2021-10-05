@@ -1,13 +1,13 @@
-use std::{fmt::Debug, marker::PhantomData};
+use std::fmt::Debug;
 
 use arrayvec::ArrayVec;
 use rand::prelude::SliceRandom;
 
-use crate::traits::{Distance, State};
+use crate::traits::State;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TileBoard<const C: usize, const R: usize> {
-    inner: [[usize; C]; R]
+    inner: [[usize; C]; R],
 }
 
 impl<const C: usize, const R: usize> Default for TileBoard<C, R> {
@@ -23,9 +23,7 @@ impl<const C: usize, const R: usize> Default for TileBoard<C, R> {
         }
         inner[R - 1][C - 1] = 0;
 
-        Self {
-            inner
-        }
+        Self { inner }
     }
 }
 
@@ -68,7 +66,35 @@ impl<const C: usize, const R: usize> TileBoard<C, R> {
     }
 }
 
+#[derive(PartialEq, Eq)]
+pub struct Coord {
+    column: usize,
+    row: usize,
+}
+
+impl Debug for Coord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Coord({}, {})", self.column, self.row)
+    }
+}
+
+impl Coord {
+    fn new(column: usize, row: usize) -> Self {
+        Self { column, row }
+    }
+
+    pub fn column(&self) -> usize {
+        self.column
+    }
+
+    pub fn row(&self) -> usize {
+        self.row
+    }
+}
+
 impl<const C: usize, const R: usize> State for TileBoard<C, R> {
+    type Point = Coord;
+
     fn next(&self) -> Vec<Self> {
         let mut res = Vec::new();
 
@@ -115,23 +141,24 @@ impl<const C: usize, const R: usize> State for TileBoard<C, R> {
         res
     }
 
-    fn finished(&self) -> bool {
-        let expected: TileBoard<C, R> = TileBoard::default();
-        self.inner == expected.inner
-    }
-
-    fn differences(&self) -> Vec<((usize, usize), (usize, usize))> {
+    fn differences(&self) -> Vec<(Self::Point, Self::Point)> {
         let mut pos = vec![0; C * R];
         for i in 0..(C * R) {
-            let val = self.inner[i % R][i / R];
+            let val = self.inner[i / C][i % C];
             pos[val] = i;
         }
 
+        // println!("\n{:?}\n{:?}", self, pos);
+
         let mut res = Vec::with_capacity(C * R);
 
-        for (real, found) in pos.iter().enumerate() {
-            let real = (real / R, real % R);
-            let found = (found / R, found % R);
+        for (actual, found) in pos.iter().enumerate() {
+            let real = if actual == 0 {
+                Coord::new(C - 1, R - 1)
+            } else {
+                Coord::new((actual - 1) % C, (actual - 1) / C)
+            };
+            let found = Coord::new(found % C, found / C);
             res.push((real, found));
         }
 
@@ -146,5 +173,110 @@ impl<const C: usize, const R: usize> Debug for TileBoard<C, R> {
         }
 
         std::fmt::Result::Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    pub use super::*;
+
+    #[test]
+    fn calculates_square_grid_differences_alright() {
+        let t: TileBoard<2, 2> = TileBoard {
+            inner: [[1, 2], [3, 0]],
+        };
+        assert_eq!(
+            t.differences(),
+            vec![
+                (Coord::new(1, 1), Coord::new(1, 1)),
+                (Coord::new(0, 0), Coord::new(0, 0)),
+                (Coord::new(1, 0), Coord::new(1, 0)),
+                (Coord::new(0, 1), Coord::new(0, 1)),
+            ]
+        );
+
+        let t: TileBoard<2, 2> = TileBoard {
+            inner: [[1, 3], [2, 0]],
+        };
+        assert_eq!(
+            t.differences(),
+            vec![
+                (Coord::new(1, 1), Coord::new(1, 1)),
+                (Coord::new(0, 0), Coord::new(0, 0)),
+                (Coord::new(1, 0), Coord::new(0, 1)),
+                (Coord::new(0, 1), Coord::new(1, 0)),
+            ]
+        );
+
+        let t: TileBoard<4, 4> = TileBoard {
+            inner: [[0, 5, 2, 10], [1, 8, 6, 3], [14, 4, 9, 12], [11, 7, 15, 13]],
+        };
+        assert_eq!(
+            t.differences(),
+            vec![
+                (Coord::new(3, 3), Coord::new(0, 0)),
+                (Coord::new(0, 0), Coord::new(0, 1)),
+                (Coord::new(1, 0), Coord::new(2, 0)),
+                (Coord::new(2, 0), Coord::new(3, 1)),
+                (Coord::new(3, 0), Coord::new(1, 2)),
+                (Coord::new(0, 1), Coord::new(1, 0)),
+                (Coord::new(1, 1), Coord::new(2, 1)),
+                (Coord::new(2, 1), Coord::new(1, 3)),
+                (Coord::new(3, 1), Coord::new(1, 1)),
+                (Coord::new(0, 2), Coord::new(2, 2)),
+                (Coord::new(1, 2), Coord::new(3, 0)),
+                (Coord::new(2, 2), Coord::new(0, 3)),
+                (Coord::new(3, 2), Coord::new(3, 2)),
+                (Coord::new(0, 3), Coord::new(3, 3)),
+                (Coord::new(1, 3), Coord::new(0, 2)),
+                (Coord::new(2, 3), Coord::new(2, 3)),
+            ]
+        );
+    }
+
+    #[test]
+    fn calculates_rectangular_grid_differences_alright() {
+        let t: TileBoard<4, 1> = TileBoard {
+            inner: [[0, 1, 2, 3]],
+        };
+        assert_eq!(
+            t.differences(),
+            vec![
+                (Coord::new(3, 0), Coord::new(0, 0)),
+                (Coord::new(0, 0), Coord::new(1, 0)),
+                (Coord::new(1, 0), Coord::new(2, 0)),
+                (Coord::new(2, 0), Coord::new(3, 0)),
+            ]
+        );
+
+        let t: TileBoard<4, 1> = TileBoard {
+            inner: [[3, 2, 1, 0]],
+        };
+        assert_eq!(
+            t.differences(),
+            vec![
+                (Coord::new(3, 0), Coord::new(3, 0)),
+                (Coord::new(0, 0), Coord::new(2, 0)),
+                (Coord::new(1, 0), Coord::new(1, 0)),
+                (Coord::new(2, 0), Coord::new(0, 0)),
+            ]
+        );
+
+        let t: TileBoard<4, 2> = TileBoard {
+            inner: [[7, 6, 5, 4], [3, 2, 1, 0]],
+        };
+        assert_eq!(
+            t.differences(),
+            vec![
+                (Coord::new(3, 1), Coord::new(3, 1)),
+                (Coord::new(0, 0), Coord::new(2, 1)),
+                (Coord::new(1, 0), Coord::new(1, 1)),
+                (Coord::new(2, 0), Coord::new(0, 1)),
+                (Coord::new(3, 0), Coord::new(3, 0)),
+                (Coord::new(0, 1), Coord::new(2, 0)),
+                (Coord::new(1, 1), Coord::new(1, 0)),
+                (Coord::new(2, 1), Coord::new(0, 0)),
+            ]
+        );
     }
 }

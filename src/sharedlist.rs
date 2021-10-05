@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum SharedList<T> {
     Empty,
     Valued { length: usize, node: Rc<Node<T>> },
@@ -39,18 +39,6 @@ impl<T> SharedList<T> {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
-    }
-}
-
-impl<T> Clone for SharedList<T> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Empty => Self::Empty,
-            Self::Valued { length, node } => Self::Valued {
-                length: *length,
-                node: Rc::clone(node),
-            },
-        }
     }
 }
 
