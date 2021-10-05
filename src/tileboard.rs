@@ -5,6 +5,32 @@ use rand::prelude::SliceRandom;
 
 use crate::traits::State;
 
+#[derive(PartialEq, Eq)]
+pub struct Coord {
+    column: usize,
+    row: usize,
+}
+
+impl Debug for Coord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Coord({}, {})", self.column, self.row)
+    }
+}
+
+impl Coord {
+    fn new(column: usize, row: usize) -> Self {
+        Self { column, row }
+    }
+
+    pub fn column(&self) -> usize {
+        self.column
+    }
+
+    pub fn row(&self) -> usize {
+        self.row
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TileBoard<const C: usize, const R: usize> {
     inner: [[usize; C]; R],
@@ -14,13 +40,11 @@ impl<const C: usize, const R: usize> Default for TileBoard<C, R> {
     fn default() -> Self {
         let mut inner = [[0; C]; R];
 
-        let mut i = 1;
-        for row in inner.iter_mut() {
-            for item in row.iter_mut() {
-                *item = i;
-                i += 1;
-            }
-        }
+        inner
+            .iter_mut()
+            .flat_map(|row| row.iter_mut())
+            .zip(1..)
+            .for_each(|(item, val)| *item = val);
         inner[R - 1][C - 1] = 0;
 
         Self { inner }
@@ -35,7 +59,7 @@ impl<const C: usize, const R: usize> TileBoard<C, R> {
 
         let mut r = rand::thread_rng();
         let mut move_options: ArrayVec<(usize, usize), 4> = ArrayVec::new();
-        for _ in 0..shuffles {
+        (0..shuffles).for_each(|_| {
             move_options.clear();
 
             if pos_x > 0 {
@@ -60,35 +84,9 @@ impl<const C: usize, const R: usize> TileBoard<C, R> {
             res.inner[pos_y][pos_x] = t;
             pos_x = c_x;
             pos_y = c_y;
-        }
+        });
 
         res
-    }
-}
-
-#[derive(PartialEq, Eq)]
-pub struct Coord {
-    column: usize,
-    row: usize,
-}
-
-impl Debug for Coord {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Coord({}, {})", self.column, self.row)
-    }
-}
-
-impl Coord {
-    fn new(column: usize, row: usize) -> Self {
-        Self { column, row }
-    }
-
-    pub fn column(&self) -> usize {
-        self.column
-    }
-
-    pub fn row(&self) -> usize {
-        self.row
     }
 }
 
@@ -147,8 +145,6 @@ impl<const C: usize, const R: usize> State for TileBoard<C, R> {
             let val = self.inner[i / C][i % C];
             pos[val] = i;
         }
-
-        // println!("\n{:?}\n{:?}", self, pos);
 
         let mut res = Vec::with_capacity(C * R);
 

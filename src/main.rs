@@ -9,7 +9,7 @@ use statemachine::{
 };
 
 fn main() {
-    let state: TileBoard<4, 2> = TileBoard::shuffled(100000);
+    let state: TileBoard<3, 3> = TileBoard::shuffled(100000);
     let solved = TileBoard::default();
     println!("{:?}", state);
     let machine = Machine::new(state, solved);

@@ -25,21 +25,23 @@ impl<S: State> Solver<S> for Machine<S> {
 
         let mut checks = 0;
         let mut seen = HashSet::new();
-        let mut active = SB::init(self.init_state);
-        while let Some((state, history)) = active.pop() {
+        let mut unprocessed_states = SB::init(self.init_state);
+        while let Some((state, history)) = unprocessed_states.pop() {
             checks += 1;
             let next_states = state.next();
             for next_state in next_states {
                 let new_history = history.push(state.clone());
                 if next_state == self.complete_state {
-                    return Some((new_history.push(next_state).into(), checks));
+                    let complete_history = new_history.push(next_state.clone());
+                    return Some((complete_history.into(), checks));
                 }
                 if !seen.contains(&next_state) {
                     seen.insert(next_state.clone());
-                    active.insert(next_state, new_history);
+                    unprocessed_states.insert(next_state, new_history);
                 }
             }
         }
+
         None
     }
 
@@ -55,17 +57,18 @@ impl<S: State> Solver<S> for Machine<S> {
         }
 
         let mut seen = HashSet::new();
-        let mut active = SB::init(self.init_state);
-        while let Some((state, history)) = active.pop() {
+        let mut unprocessed_states = SB::init(self.init_state);
+        while let Some((state, history)) = unprocessed_states.pop() {
             let next_states = state.next();
             for next_state in next_states {
                 let new_history = history.push(state.clone());
                 if next_state == self.complete_state {
-                    results.push(new_history.push(next_state.clone()).into());
+                    let complete_history = new_history.push(next_state.clone());
+                    results.push(complete_history.into());
                 }
                 if !seen.contains(&next_state) {
                     seen.insert(next_state.clone());
-                    active.insert(next_state, new_history);
+                    unprocessed_states.insert(next_state, new_history);
                 }
             }
         }
